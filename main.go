@@ -15,6 +15,7 @@ func FileUploadRoute(req *server.Request) *server.Response {
 	log.Println("[MAIN] File Upload request:", req)
 	bytes, err := req.ExtractBytes()
 	if err != nil {
+		log.Fatalln("Failed to extract bytes from payload:", err)
 		return server.NewStatusResponse(server.STATUS_INTERNALERR)
 	}
 

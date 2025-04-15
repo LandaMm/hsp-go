@@ -57,6 +57,18 @@ func NewJsonResponse(data map[string]string) (*Response, error) {
 	}, nil
 }
 
+func NewErrorResponse(err error) *Response {
+	return &Response{
+		StatusCode: STATUS_INTERNALERR,
+		Format: DataFormat{
+			Format:   DF_TEXT,
+			Encoding: E_UTF8,
+		},
+		Headers: map[string]string{},
+		Payload: []byte(err.Error()),
+	}
+}
+
 func (res *Response) ToPacket() *Packet {
 	headers := make(map[string]string)
 

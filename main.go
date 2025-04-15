@@ -15,15 +15,13 @@ func FileUploadRoute(req *server.Request) *server.Response {
 	log.Println("[MAIN] File Upload request:", req)
 	bytes, err := req.ExtractBytes()
 	if err != nil {
-		log.Fatalln("Failed to extract bytes from payload:", err)
-		return server.NewStatusResponse(server.STATUS_INTERNALERR)
+		return server.NewErrorResponse(err)
 	}
 
 	filename := "received.bin"
 	err = os.WriteFile(filename, bytes, 0644)
 	if err != nil {
-		log.Fatalln("Failed to write packet payload into a file:", err)
-		return server.NewStatusResponse(server.STATUS_INTERNALERR)
+		return server.NewErrorResponse(err)
 	}
 
 	log.Println("Received new request from client:", req.Conn().RemoteAddr().String())

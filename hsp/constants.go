@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// DO NOT CHANGE THIS
+const HSP_PORT = "998"
+
 const (
 	H_STATUS = "status"
 	H_DATA_FORMAT = "data-format"
@@ -68,5 +71,12 @@ func ParseDataFormat(format string) (*DataFormat, error) {
 		Format: f,
 		Encoding: encoding,
 	}, nil
+}
+
+func (df *DataFormat) String() string {
+	if df.Format == DF_BYTES {
+		return df.Format
+	}
+	return fmt.Sprintf("%s:%s", df.Format, df.Encoding)
 }
 

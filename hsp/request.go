@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"slices"
-	"strings"
 )
 
 type Request struct {
@@ -35,30 +34,7 @@ func (req *Request) GetDataFormat() (*DataFormat, error) {
 		return nil, errors.New("Data format header is not provided in request")
 	}
 
-	parts := strings.Split(format, ":")
-	if len(parts) != 2 {
-		if format == "bytes" {
-			return &DataFormat{
-				Format: DF_BYTES,
-			}, nil
-		}
-		return nil, errors.New("Invalid data format header")
-	}
-
-	f, ok := DATA_FORMATS[parts[0]]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("Unknown data format: %s", parts[0]))
-	}
-
-	encoding, ok := ENCODINGS[parts[1]]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("Unknown payload encoding: %s", parts[1]))
-	}
-
-	return &DataFormat{
-		Format: f,
-		Encoding: encoding,
-	}, nil
+	return ParseDataFormat(format)
 }
 
 func (req *Request) ExtractText() (string, error) {

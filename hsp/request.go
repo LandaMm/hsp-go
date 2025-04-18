@@ -27,6 +27,10 @@ func (req *Request) GetHeader(key string) (string, bool) {
 	return value, ok
 }
 
+func (req *Request) GetRawPacket() *Packet {
+	return req.packet
+}
+
 func (req *Request) GetDataFormat() (*DataFormat, error) {
 	// TODO: use predefined header names
 	format, ok := req.packet.Headers["data-format"]

@@ -37,14 +37,14 @@ func (r *Router) Handle(conn net.Conn) error {
 	// TODO: Ability to keep connection alive
 	packet, err := dupl.ReadPacket()
 	if err != nil {
-		dupl.WritePacket(NewErrorResponse(err).ToPacket())
+		_, _ = dupl.WritePacket(hsp.NewErrorResponse(err).ToPacket())
 		return err
 	}
 
 	if route, ok := packet.Headers["route"]; ok {
 		log.Printf("[ROUTER] New connection to '%s'", route)
 		if handler, ok := r.Routes[route]; ok {
-			req := hsp.NewPacketRequest(conn.RemoteAddr(), packet)
+			req := hsp.NewRequest(conn, packet)
 			res := handler(req)
 			_, err := dupl.WritePacket(res.ToPacket())
 			return err

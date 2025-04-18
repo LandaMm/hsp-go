@@ -70,7 +70,19 @@ func NewTextResponse(text string) *Response {
 	}
 }
 
-func NewJsonResponse(data map[string]string) (*Response, error) {
+func NewErrorResponse(err error) *Response {
+	return &Response{
+		StatusCode: STATUS_INTERNALERR,
+		Headers:    make(map[string]string),
+		Format: DataFormat{
+			Format:   DF_TEXT,
+			Encoding: E_UTF8,
+		},
+		Payload: []byte(err.Error()),
+	}
+}
+
+func NewJsonResponse(data any) (*Response, error) {
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -85,18 +97,6 @@ func NewJsonResponse(data map[string]string) (*Response, error) {
 		},
 		Payload: jsonBytes,
 	}, nil
-}
-
-func NewErrorResponse(err error) *Response {
-	return &Response{
-		StatusCode: STATUS_INTERNALERR,
-		Format: DataFormat{
-			Format:   DF_TEXT,
-			Encoding: E_UTF8,
-		},
-		Headers: map[string]string{},
-		Payload: []byte(err.Error()),
-	}
 }
 
 func (res *Response) ToPacket() *Packet {

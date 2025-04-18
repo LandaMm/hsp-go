@@ -3,6 +3,7 @@ package hsp
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"maps"
@@ -14,6 +15,35 @@ type Response struct {
 	Format DataFormat
 	Headers map[string]string
 	Payload []byte
+}
+
+func NewPacketResponse(packet *Packet) *Response {
+	status, sok := packet.Headers[H_STATUS]
+	if !sok {
+		panic(errors.New("Packet must contain status header for response"))
+	}
+
+	format, fok := packet.Headers[H_DATA_FORMAT]
+	if !fok {
+		panic(errors.New("Packet must contain data format header for response"))
+	}
+
+	s, err := strconv.Atoi(status)
+	if err != nil {
+		panic(errors.New(fmt.Sprintf("Packet's status code is invalid: %s", err.Error())))
+	}
+
+	df, err := ParseDataFormat(format)
+	if err != nil {
+		panic(errors.New(fmt.Sprintf("Failed to parse packet's data format: %s", err.Error())))
+	}
+
+	return &Response{
+		StatusCode: s,
+		Format: *df,
+		Headers: packet.Headers,
+		Payload: packet.Payload,
+	}
 }
 
 func NewStatusResponse(status int) *Response {

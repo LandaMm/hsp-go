@@ -2,7 +2,6 @@ package client
 
 import (
 	"net"
-	"strings"
 
 	"github.com/LandaMm/hsp-go/hsp"
 )
@@ -18,24 +17,26 @@ func NewClient() *Client {
 }
 
 func (c *Client) SendText(address, text string) (*hsp.Response, error) {
-	parts := strings.SplitN(address, "/", 1)
-	
-	var route string
-	if len(parts) == 1 {
-		route = "/"
-	} else {
-		route = "/" + strings.Join(parts[1:], "")
+	addr, err := hsp.ParseAddress(address)
+
+	if err != nil {
+		return nil, err
+	}
+
+	df := hsp.DataFormat{
+		Format: hsp.DF_TEXT,
+		Encoding: hsp.E_UTF8,
 	}
 
 	headers := make(map[string]string)
-	headers[hsp.H_ROUTE] = route
-	headers[hsp.H_DATA_FORMAT] = hsp.DF_TEXT
+	headers[hsp.H_ROUTE] = addr.Route
+	headers[hsp.H_DATA_FORMAT] = df.String()
 
 	payload := []byte(text)
 
 	pkt := hsp.BuildPacket(headers, payload)
 
-	conn, err := net.Dial("tcp", address)
+	conn, err := net.Dial("tcp", addr.String())
 	if err != nil {
 		return nil, err
 	}

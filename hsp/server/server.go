@@ -4,19 +4,23 @@ import (
 	"log"
 	"net"
 	"sync"
+
+	"github.com/LandaMm/hsp-go/hsp"
 )
 
 type Server struct {
-	Addr string
+	Addr hsp.Adddress
+	routePrefix string // TODO: Support route prefix, e.g listening on localhost/api
 	Running bool
 	ConnChan chan net.Conn
 	listener net.Listener
 	mu sync.Mutex
 }
 
-func NewServer(addr string) *Server {
+func NewServer(addr hsp.Adddress) *Server {
 	return &Server{
 		Addr: addr,
+		routePrefix: addr.Route,
 		Running: false,
 	}
 }
@@ -26,7 +30,7 @@ func (s *Server) SetListener(ln chan net.Conn) {
 }
 
 func (s *Server) Start() error {
-	ln, err := net.Listen("tcp", ":3000")
+	ln, err := net.Listen("tcp", s.Addr.String())
 	if err != nil {
 		return err
 	}

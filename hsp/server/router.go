@@ -37,6 +37,7 @@ func (r *Router) Handle(conn net.Conn) error {
 	// TODO: Ability to keep connection alive
 	packet, err := dupl.ReadPacket()
 	if err != nil {
+		dupl.WritePacket(NewErrorResponse(err).ToPacket())
 		return err
 	}
 
@@ -51,4 +52,3 @@ func (r *Router) Handle(conn net.Conn) error {
 	}
 	return errors.New("Not Found")
 }
-

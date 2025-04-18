@@ -12,9 +12,9 @@ import (
 
 type Response struct {
 	StatusCode int
-	Format DataFormat
-	Headers map[string]string
-	Payload []byte
+	Format     DataFormat
+	Headers    map[string]string
+	Payload    []byte
 }
 
 func NewPacketResponse(packet *Packet) *Response {
@@ -49,9 +49,9 @@ func NewPacketResponse(packet *Packet) *Response {
 func NewStatusResponse(status int) *Response {
 	return &Response{
 		StatusCode: status,
-		Headers: make(map[string]string),
+		Headers:    make(map[string]string),
 		Format: DataFormat{
-			Format: DF_BYTES,
+			Format:   DF_BYTES,
 			Encoding: "",
 		},
 		Payload: make([]byte, 0),
@@ -61,9 +61,9 @@ func NewStatusResponse(status int) *Response {
 func NewTextResponse(text string) *Response {
 	return &Response{
 		StatusCode: STATUS_SUCCESS,
-		Headers: make(map[string]string),
+		Headers:    make(map[string]string),
 		Format: DataFormat{
-			Format: DF_TEXT,
+			Format:   DF_TEXT,
 			Encoding: E_UTF8,
 		},
 		Payload: []byte(text),
@@ -78,13 +78,25 @@ func NewJsonResponse(data map[string]string) (*Response, error) {
 
 	return &Response{
 		StatusCode: STATUS_SUCCESS,
-		Headers: make(map[string]string),
+		Headers:    make(map[string]string),
 		Format: DataFormat{
-			Format: DF_JSON,
+			Format:   DF_JSON,
 			Encoding: E_UTF8,
 		},
 		Payload: jsonBytes,
 	}, nil
+}
+
+func NewErrorResponse(err error) *Response {
+	return &Response{
+		StatusCode: STATUS_INTERNALERR,
+		Format: DataFormat{
+			Format:   DF_TEXT,
+			Encoding: E_UTF8,
+		},
+		Headers: map[string]string{},
+		Payload: []byte(err.Error()),
+	}
 }
 
 func (res *Response) ToPacket() *Packet {
@@ -92,7 +104,11 @@ func (res *Response) ToPacket() *Packet {
 
 	maps.Copy(headers, res.Headers)
 
-	headers[H_DATA_FORMAT] = fmt.Sprintf("%s:%s", res.Format.Format, res.Format.Encoding)
+	if res.Format.Format == DF_BYTES {
+		headers[H_DATA_FORMAT] = DF_BYTES
+	} else {
+		headers[H_DATA_FORMAT] = fmt.Sprintf("%s:%s", res.Format.Format, res.Format.Encoding)
+	}
 	headers[H_STATUS] = strconv.Itoa(res.StatusCode)
 
 	return BuildPacket(headers, res.Payload)
@@ -117,4 +133,3 @@ func (res *Response) Write(p []byte) (int, error) {
 
 	return n, err
 }
-

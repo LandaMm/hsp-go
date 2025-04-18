@@ -1,5 +1,11 @@
 package hsp
 
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
 const (
 	H_STATUS = "status"
 	H_DATA_FORMAT = "data-format"
@@ -35,5 +41,32 @@ var ENCODINGS map[string]string = map[string]string{
 type DataFormat struct {
 	Format string
 	Encoding string
+}
+
+func ParseDataFormat(format string) (*DataFormat, error) {
+	parts := strings.Split(format, ":")
+	if len(parts) != 2 {
+		if format == "bytes" {
+			return &DataFormat{
+				Format: DF_BYTES,
+			}, nil
+		}
+		return nil, errors.New("Invalid data format header")
+	}
+
+	f, ok := DATA_FORMATS[parts[0]]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Unknown data format: %s", parts[0]))
+	}
+
+	encoding, ok := ENCODINGS[parts[1]]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Unknown payload encoding: %s", parts[1]))
+	}
+
+	return &DataFormat{
+		Format: f,
+		Encoding: encoding,
+	}, nil
 }
 

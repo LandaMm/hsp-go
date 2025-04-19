@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"slices"
+	"strconv"
+	"strings"
 )
 
 type Request struct {
@@ -40,6 +42,45 @@ func (req *Request) GetDataFormat() (*DataFormat, error) {
 	}
 
 	return ParseDataFormat(format)
+}
+
+func (req *Request) GetRequestKind() string {
+	_, ok := req.GetHeader(H_XSTREAM)
+	if ok {
+		return "stream"
+	}
+
+	return "single-hit"
+}
+
+func (req *Request) GetStreamInfo() (*StreamInfo, error) {
+	stream, ok := req.GetHeader(H_XSTREAM)
+	if !ok {
+		return nil, errors.New("No X-STREAM header presented in request")
+	}
+
+	parts := strings.Split(stream, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("Invalid value of X-STREAM header: '%s'", stream)
+	}
+
+	totalS, bufsizeS := parts[0], parts[1]
+
+	total, err := strconv.ParseUint(totalS, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	bufsize, err := strconv.ParseUint(bufsizeS, 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	buf := uint16(bufsize)
+
+	return &StreamInfo{
+		TotalBytes: total,
+		BufferSize: buf,
+	}, nil
 }
 
 func (req *Request) ExtractText() (string, error) {

@@ -18,18 +18,18 @@ const (
 )
 
 type RawPacket struct {
-	Magic uint32
-	Version uint8
-	Flags uint8
-	HeaderSize uint16
+	Magic       uint32
+	Version     uint8
+	Flags       uint8
+	HeaderSize  uint16
 	PayloadSize uint32
-	Header []byte
-	Payload []byte
+	Header      []byte
+	Payload     []byte
 }
 
 type Packet struct {
 	Version int
-	Flags int
+	Flags   int
 	Headers map[string]string
 	Payload []byte
 }
@@ -41,7 +41,7 @@ type PacketDuplex struct {
 func BuildPacket(headers map[string]string, payload []byte) *Packet {
 	return &Packet{
 		Version: PacketVersion,
-		Flags: 0, // TODO:
+		Flags:   0, // TODO:
 		Headers: headers,
 		Payload: payload,
 	}
@@ -76,7 +76,7 @@ func ParseHeaders(rawHeaders []byte, headers *map[string]string) error {
 
 func SerializeHeaders(headers *map[string]string) []byte {
 	buf := new(bytes.Buffer)
-	for k, v := range(*headers) {
+	for k, v := range *headers {
 		fmt.Fprintf(buf, "%s:%s\n", k, v)
 	}
 	fmt.Fprintf(buf, "\n")
@@ -133,7 +133,7 @@ func (r *PacketDuplex) ReadPacket() (*Packet, error) {
 
 	pkt := &Packet{
 		Version: int(rpkt.Version),
-		Flags: int(rpkt.Flags),
+		Flags:   int(rpkt.Flags),
 		Headers: make(map[string]string),
 		Payload: rpkt.Payload,
 	}
@@ -169,7 +169,7 @@ func (r *PacketDuplex) WritePacket(packet *Packet) (int, error) {
 	if err := binary.Write(buf, binary.BigEndian, uint32(payloadSize)); err != nil {
 		return 0, errors.New(fmt.Sprintf("Failed to write payload size into packet: %s", err.Error()))
 	}
-	
+
 	if _, err := buf.Write(rawHeaders[:headerSize]); err != nil {
 		return 0, errors.New(fmt.Sprintf("Failed to write raw headers: %s", err.Error()))
 	}
@@ -185,4 +185,3 @@ func (r *PacketDuplex) WritePacket(packet *Packet) (int, error) {
 
 	return n, nil
 }
-

@@ -9,19 +9,19 @@ import (
 )
 
 type Server struct {
-	Addr hsp.Adddress
+	Addr        hsp.Adddress
 	routePrefix string // TODO: Support route prefix, e.g listening on localhost/api
-	Running bool
-	ConnChan chan net.Conn
-	listener net.Listener
-	mu sync.Mutex
+	Running     bool
+	ConnChan    chan net.Conn
+	listener    net.Listener
+	mu          sync.Mutex
 }
 
 func NewServer(addr hsp.Adddress) *Server {
 	return &Server{
-		Addr: addr,
+		Addr:        addr,
 		routePrefix: addr.Route,
-		Running: false,
+		Running:     false,
 	}
 }
 
@@ -45,7 +45,7 @@ func (s *Server) Start() error {
 		conn, err := ln.Accept()
 		if err != nil {
 			if !s.IsRunning() {
-				break;
+				break
 			}
 			return err
 		}
@@ -65,7 +65,6 @@ func (s *Server) Start() error {
 	return nil
 }
 
-
 func (s *Server) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -77,7 +76,7 @@ func (s *Server) Stop() error {
 	if s.ConnChan != nil {
 		close(s.ConnChan)
 	}
-	
+
 	return nil
 }
 
@@ -86,5 +85,3 @@ func (s *Server) IsRunning() bool {
 	defer s.mu.Unlock()
 	return s.Running
 }
-
-

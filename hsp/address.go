@@ -6,13 +6,13 @@ import (
 )
 
 type Adddress struct {
-	Host string
+	Host  string
 	Route string
 }
 
 func ParseAddress(address string) (*Adddress, error) {
 	parts := strings.SplitN(address, "/", 2)
-	
+
 	var route string
 	if len(parts) == 1 {
 		route = "/"
@@ -25,7 +25,7 @@ func ParseAddress(address string) (*Adddress, error) {
 	addr := parts[0]
 
 	return &Adddress{
-		Host: addr,
+		Host:  addr,
 		Route: route,
 	}, nil
 }
@@ -33,4 +33,3 @@ func ParseAddress(address string) (*Adddress, error) {
 func (a *Adddress) String() string {
 	return fmt.Sprintf("%s:%s", a.Host, HSP_PORT)
 }
-

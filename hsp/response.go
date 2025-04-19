@@ -40,9 +40,9 @@ func NewPacketResponse(packet *Packet) *Response {
 
 	return &Response{
 		StatusCode: s,
-		Format: *df,
-		Headers: packet.Headers,
-		Payload: packet.Payload,
+		Format:     *df,
+		Headers:    packet.Headers,
+		Payload:    packet.Payload,
 	}
 }
 

@@ -10,15 +10,15 @@ import (
 const HSP_PORT = "998"
 
 const (
-	H_STATUS = "status"
+	H_STATUS      = "status"
 	H_DATA_FORMAT = "data-format"
-	H_ROUTE = "route"
+	H_ROUTE       = "route"
 )
 
 const (
 	DF_BYTES = "bytes"
-	DF_TEXT = "text"
-	DF_JSON = "json"
+	DF_TEXT  = "text"
+	DF_JSON  = "json"
 )
 
 const (
@@ -26,15 +26,15 @@ const (
 )
 
 const (
-	STATUS_SUCCESS = 0
-	STATUS_NOTFOUND = 69
+	STATUS_SUCCESS     = 0
+	STATUS_NOTFOUND    = 69
 	STATUS_INTERNALERR = 129
 )
 
 var DATA_FORMATS map[string]string = map[string]string{
 	"bytes": DF_BYTES,
-	"text": DF_TEXT,
-	"json": DF_JSON,
+	"text":  DF_TEXT,
+	"json":  DF_JSON,
 }
 
 var ENCODINGS map[string]string = map[string]string{
@@ -42,8 +42,20 @@ var ENCODINGS map[string]string = map[string]string{
 }
 
 type DataFormat struct {
-	Format string
+	Format   string
 	Encoding string
+}
+
+func TextDataFormat() *DataFormat {
+	return &DataFormat{Format: DF_TEXT, Encoding: E_UTF8}
+}
+
+func JsonDataFormat() *DataFormat {
+	return &DataFormat{Format: DF_JSON, Encoding: E_UTF8}
+}
+
+func BytesDataFormat() *DataFormat {
+	return &DataFormat{Format: DF_BYTES}
 }
 
 func ParseDataFormat(format string) (*DataFormat, error) {
@@ -68,7 +80,7 @@ func ParseDataFormat(format string) (*DataFormat, error) {
 	}
 
 	return &DataFormat{
-		Format: f,
+		Format:   f,
 		Encoding: encoding,
 	}, nil
 }
@@ -79,4 +91,3 @@ func (df *DataFormat) String() string {
 	}
 	return fmt.Sprintf("%s:%s", df.Format, df.Encoding)
 }
-

@@ -44,26 +44,23 @@ func PingPongRoute(req *hsp.Request) *hsp.Response {
 	return res
 }
 
-func FileUploadRoute(req *hsp.Request) *hsp.Response {
-	log.Println("[MAIN] File Upload request:", req)
-	bytes, err := req.ExtractBytes()
-	if err != nil {
-		return hsp.NewStatusResponse(hsp.STATUS_INTERNALERR)
-	}
+func FileUploadStreamer(req *hsp.Request, c chan []byte) {
+	log.Println("[MAIN] File Upload request:", req.GetRawPacket())
 
 	filename := "received.bin"
-	err = os.WriteFile(filename, bytes, 0644)
+
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatalln("Failed to write packet payload into a file:", err)
-		return hsp.NewStatusResponse(hsp.STATUS_INTERNALERR)
+		log.Fatalf("Failed to open file: %v", err)
 	}
 
-	log.Println("Received new request from client:", req.Conn().RemoteAddr().String())
+	defer file.Close()
 
-	res := hsp.NewTextResponse("Hello, World!")
-	res.AddHeader("filename", filename)
-
-	return res
+	for buf := range c {
+		if _, err := file.Write(buf); err != nil {
+			log.Printf("Write error: %v", err)
+		}
+	}
 }
 
 func JsonMockRoute(req *hsp.Request) *hsp.Response {
@@ -97,7 +94,7 @@ func main() {
 
 	router := server.NewRouter()
 
-	router.AddRoute("/file-upload", FileUploadRoute)
+	router.AddStreamer("/file-upload", FileUploadStreamer)
 	router.AddRoute("/ping-pong", PingPongRoute)
 	router.AddRoute("/mock-json", JsonMockRoute)
 

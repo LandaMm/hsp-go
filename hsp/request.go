@@ -53,6 +53,15 @@ func (req *Request) GetRequestKind() string {
 	return "single-hit"
 }
 
+func (req *Request) GetRoute() string {
+	route, ok := req.GetHeader(H_ROUTE)
+	if !ok {
+		return "?"
+	}
+
+	return route
+}
+
 func (req *Request) GetStreamInfo() (*StreamInfo, error) {
 	stream, ok := req.GetHeader(H_XSTREAM)
 	if !ok {

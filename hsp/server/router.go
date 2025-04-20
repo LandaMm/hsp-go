@@ -50,8 +50,6 @@ func (r *Router) SetStreamBufferSize(size uint16) {
 func (r *Router) Handle(conn net.Conn) error {
 	defer conn.Close()
 
-	log.Printf("Got new connection from %s\n", conn.RemoteAddr().String())
-
 	dupl := hsp.NewPacketDuplex(conn)
 
 	// TODO: Ability to keep connection alive
@@ -62,13 +60,16 @@ func (r *Router) Handle(conn net.Conn) error {
 	}
 
 	if route, ok := packet.Headers["route"]; ok {
-		log.Printf("[ROUTER] New connection to '%s'", route)
 		req := hsp.NewRequest(conn, packet)
 
 		switch req.GetRequestKind() {
 		case "single-hit":
 			if handler, ok := r.routes[route]; ok {
 				res := handler(req)
+				_, err := dupl.WritePacket(res.ToPacket())
+				return err
+			} else if fallback, ok := r.routes["*"]; ok {
+				res := fallback(req)
 				_, err := dupl.WritePacket(res.ToPacket())
 				return err
 			}

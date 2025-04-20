@@ -31,6 +31,7 @@ const (
 	STATUS_SUCCESS     = 0
 	STATUS_NOTFOUND    = 69
 	STATUS_INTERNALERR = 129
+	STATUS_RECEIVED    = 1
 )
 
 var DATA_FORMATS map[string]string = map[string]string{

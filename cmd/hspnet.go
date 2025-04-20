@@ -83,7 +83,7 @@ func StartServer(addr *hsp.Adddress) {
 
 	router := server.NewRouter()
 
-	router.AddRoute("/", Index)
+	router.AddRoute("*", Index)
 
 	srv.SetListener(handler)
 
@@ -116,7 +116,10 @@ func StartServer(addr *hsp.Adddress) {
 }
 
 func StartSession(addr *hsp.Adddress) {
-	fmt.Println("Starting session on", addr.String())
+	url := addr.String() + addr.Route
+	fmt.Println("Starting session on", url)
+
+	c := client.NewClient()
 
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -125,15 +128,13 @@ func StartSession(addr *hsp.Adddress) {
 
 	defer rl.Close()
 
-	c := client.NewClient()
-
 	for {
 		line, err := rl.Readline()
 		if err != nil {
 			break
 		}
 
-		c.SendText(addr.String(), line)
+		c.SendText(url, line)
 	}
 }
 
@@ -143,23 +144,33 @@ func main() {
 
 	var host string
 	var service string
+	var address string
 
-	flag.StringVar(&host, "host", "localhost", "specify target host (default: localhost)")
-	flag.StringVar(&service, "port", "998", "specify target port (default: 998)")
+	flag.StringVar(&host, "host", "localhost", "specify server host (default: localhost)")
+	flag.StringVar(&service, "port", "998", "specify server port (default: 998)")
+	flag.StringVar(&address, "addr", "localhost:998", "specify target address (default: :998)")
 
 	flag.Parse()
 
-	a := fmt.Sprintf("%s:%s", host, service)
-	addr, err := hsp.ParseAddress(a)
-	if err != nil {
-		fmt.Printf("ERR: Invalid address %s: %v\n", a, err)
-		return
-	}
-
 	if listening {
+		a := fmt.Sprintf("%s:%s", host, service)
+		addr, err := hsp.ParseAddress(a)
+		if err != nil {
+			fmt.Printf("ERR: Invalid address %s: %v\n", a, err)
+			return
+		}
+
 		StartServer(addr)
 		return
 	}
 
+	addr, err := hsp.ParseAddress(address)
+	if err != nil {
+		fmt.Printf("ERR: Invalid address %s: %v\n", address, err)
+		return
+	}
 	StartSession(addr)
 }
+
+
+

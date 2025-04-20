@@ -1,7 +1,6 @@
 package server
 
 import (
-	"log"
 	"net"
 	"sync"
 
@@ -41,7 +40,6 @@ func (s *Server) Start() error {
 	s.mu.Unlock()
 
 	for s.IsRunning() {
-		log.Println("DEBUG:", "Waiting for new connection to accept")
 		conn, err := ln.Accept()
 		if err != nil {
 			if !s.IsRunning() {
@@ -54,8 +52,6 @@ func (s *Server) Start() error {
 			s.ConnChan <- conn
 		}
 	}
-
-	log.Println("DEBUG:", "Finished listening for connections")
 
 	s.mu.Lock()
 	s.Running = false

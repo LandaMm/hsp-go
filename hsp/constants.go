@@ -13,8 +13,6 @@ const (
 	H_STATUS      = "status"
 	H_DATA_FORMAT = "data-format"
 	H_ROUTE       = "route"
-	H_XSTREAM     = "x-stream"
-	H_XSTREAM_KEY = "x-stream-key"
 )
 
 const (
@@ -47,11 +45,6 @@ var ENCODINGS map[string]string = map[string]string{
 type DataFormat struct {
 	Format   string
 	Encoding string
-}
-
-type StreamInfo struct {
-	TotalBytes uint64
-	BufferSize uint16
 }
 
 func TextDataFormat() *DataFormat {

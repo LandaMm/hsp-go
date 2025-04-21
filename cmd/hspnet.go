@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/LandaMm/hsp-go/hsp"
@@ -16,63 +15,70 @@ import (
 	"github.com/chzyer/readline"
 )
 
-func Index(req *hsp.Request) *hsp.Response {
-	pkt := req.GetRawPacket()
-
-	fmt.Printf("%s %s\n", strings.ToUpper(req.GetRequestKind()), req.GetRoute())
+func PrintPacket(pkt *hsp.Packet) error {
+	fmt.Printf("REQUEST %s\n", pkt.Headers[hsp.H_ROUTE])
 	fmt.Println("Headers:")
 
 	for k, v := range pkt.Headers {
 		fmt.Printf("\t%s: %s\n", k, v)
 	}
 
-	df, err := req.GetDataFormat()
+	h, ok := pkt.Headers[hsp.H_DATA_FORMAT]
+	if !ok {
+		return fmt.Errorf("data format header is not present")
+	}
+
+	df, err := hsp.ParseDataFormat(h)
 	if err != nil {
-		h, ok := req.GetHeader(hsp.H_DATA_FORMAT)
-		if !ok {
-			fmt.Println("ERR: Data-Format header is not present")
-			return hsp.NewErrorResponse(err)
-		}
-		fmt.Printf("Invalid Data Format: %s\n", h)
-		return hsp.NewErrorResponse(err)
+		return fmt.Errorf("invalid data format: %s", h)
 	}
 
 	fmt.Printf("Payload (%s):\n", df.String())
 
 	switch df.Format {
-	case "text":
-		body, err := req.ExtractText()
+	case hsp.DF_TEXT:
+		fmt.Println(string(pkt.Payload))
+	case hsp.DF_JSON:
+		var out any
+		err := json.Unmarshal(pkt.Payload, &out)
 		if err != nil {
-			fmt.Println("ERR: Failed to extract text from payload:", err)
-			return hsp.NewErrorResponse(err)
+			return err
 		}
 
-		fmt.Println(body)
-		break
-	case "json":
-		var out map[string]any
-		err := req.ExtractJson(&out)
+		raw, err := json.MarshalIndent(out, "", "  ")
 		if err != nil {
-			fmt.Println("ERR: Failed to extract json from payload:", err)
-			return hsp.NewErrorResponse(err)
+			return err
 		}
 
-		fmt.Println(json.MarshalIndent(out, "", "  "))
-		break
-	case "bytes":
-		bts, err := req.ExtractBytes()
-		if err != nil {
-			fmt.Println("ERR: Failed to extract bytes from payload:", err)
-			return hsp.NewErrorResponse(err)
-		}
-
-		fmt.Println(bts)
-		break;
+		fmt.Println(string(raw))
+	case hsp.DF_BYTES:
+		fmt.Printf("%d bytes\n", len(pkt.Payload))
 	default:
 		fmt.Printf("ERR: Unsupported data format: %s\n", df.String())
 	}
+	
+	return nil
+}
 
-	return hsp.NewStatusResponse(hsp.STATUS_SUCCESS)
+func Index(req *hsp.Request) *hsp.Response {
+	pkt := req.GetRawPacket()
+
+	err := PrintPacket(pkt)
+	if err != nil {
+		fmt.Println("ERR: Couldn't print out the packet:", err)
+	}
+
+	rsp := hsp.NewStatusResponse(hsp.STATUS_SUCCESS)
+
+	reqF, err := req.GetDataFormat()
+	if err != nil {
+		return hsp.NewErrorResponse(err)
+	}
+
+	rsp.Format = *reqF
+	rsp.Payload = req.GetRawPacket().Payload
+
+	return rsp
 }
 
 func StartServer(addr *hsp.Adddress) {
@@ -115,7 +121,7 @@ func StartServer(addr *hsp.Adddress) {
 	}
 }
 
-func StartSession(addr *hsp.Adddress) {
+func StartSession(addr *hsp.Adddress, df *hsp.DataFormat) {
 	url := addr.String() + addr.Route
 	fmt.Println("Starting session on", url)
 
@@ -126,7 +132,11 @@ func StartSession(addr *hsp.Adddress) {
 		fmt.Println("ERR: Failed to open readline session:", err)
 	}
 
-	defer rl.Close()
+	defer func() {
+		if err := rl.Close(); err != nil {
+			fmt.Println("ERR: Failed to close readline session:", err)
+		}
+	}()
 
 	for {
 		line, err := rl.Readline()
@@ -134,7 +144,33 @@ func StartSession(addr *hsp.Adddress) {
 			break
 		}
 
-		c.SendText(url, line)
+		var rsp *hsp.Response
+
+		switch df.Format {
+		case hsp.DF_TEXT:
+			rsp, err = c.SendText(url, line)
+		case hsp.DF_JSON:
+			var data any
+			err = json.Unmarshal([]byte(line), &data)
+			if err != nil {
+				fmt.Println("ERR: Invalid JSON for request:", err)
+			}
+
+			rsp, err = c.SendJson(url, data)
+		case hsp.DF_BYTES:
+			rsp, err = c.SendBytes(url, []byte(line))
+		default:
+			fmt.Println("ERR: Unsupported data format:", df.Format)
+			return
+		}
+
+		if err != nil {
+			fmt.Println("ERR: Failed to send text to server:", err)
+		}
+
+		if err = PrintPacket(rsp.ToPacket()); err != nil {
+			fmt.Println("ERR: Couldn't print out response:", err)
+		}
 	}
 }
 
@@ -146,9 +182,13 @@ func main() {
 	var service string
 	var address string
 
-	flag.StringVar(&host, "host", "localhost", "specify server host (default: localhost)")
-	flag.StringVar(&service, "port", "998", "specify server port (default: 998)")
-	flag.StringVar(&address, "addr", "localhost:998", "specify target address (default: :998)")
+	var dataFormat string
+
+	flag.StringVar(&host, "host", "localhost", "specify server host")
+	flag.StringVar(&service, "port", "998", "specify server port")
+	flag.StringVar(&address, "addr", "localhost:998", "specify target address")
+
+	flag.StringVar(&dataFormat, "format", "text", "specify request's data format")
 
 	flag.Parse()
 
@@ -169,7 +209,21 @@ func main() {
 		fmt.Printf("ERR: Invalid address %s: %v\n", address, err)
 		return
 	}
-	StartSession(addr)
+
+	var df *hsp.DataFormat
+
+	switch dataFormat {
+	case hsp.DF_TEXT:
+		df = hsp.TextDataFormat()
+	case hsp.DF_JSON:
+		df = hsp.JsonDataFormat()
+	case hsp.DF_BYTES:
+		df = hsp.BytesDataFormat()
+	default:
+		fmt.Println("ERR: Invalid format selected for requests:", dataFormat)
+	}
+
+	StartSession(addr, df)
 }
 
 

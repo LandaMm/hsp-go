@@ -166,6 +166,7 @@ func StartSession(addr *hsp.Adddress, df *hsp.DataFormat) {
 
 		if err != nil {
 			fmt.Println("ERR: Failed to send text to server:", err)
+			continue
 		}
 
 		if err = PrintPacket(rsp.ToPacket()); err != nil {

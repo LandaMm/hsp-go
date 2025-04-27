@@ -10,19 +10,21 @@ import (
 
 type Client struct {
 	Duplex *hsp.PacketDuplex
+	Headers map[string]string
 }
 
-func NewClient() *Client {
+func NewClient(headers map[string]string) *Client {
 	return &Client{
 		Duplex: nil,
+		Headers: headers,
 	}
 }
 
-func (c *Client) BuildHeaders(address *hsp.Adddress, df *hsp.DataFormat, mergeHeaders *map[string]string) map[string]string {
+func (c *Client) BuildHeaders(address *hsp.Adddress, df *hsp.DataFormat) map[string]string {
 	headers := make(map[string]string)
 
-	if mergeHeaders != nil {
-		maps.Copy(headers, *mergeHeaders)
+	if len(c.Headers) > 0 {
+		maps.Copy(headers, c.Headers)
 	}
 
 	headers[hsp.H_ROUTE] = address.Route
@@ -54,7 +56,7 @@ func (c *Client) SendText(address, text string) (*hsp.Response, error) {
 
 	payload := []byte(text)
 
-	hdrs := c.BuildHeaders(addr, hsp.TextDataFormat(), nil)
+	hdrs := c.BuildHeaders(addr, hsp.TextDataFormat())
 
 	pkt := hsp.BuildPacket(hdrs, payload)
 
@@ -78,7 +80,7 @@ func (c *Client) SendJson(address string, data any) (*hsp.Response, error) {
 		return nil, err
 	}
 
-	hdrs := c.BuildHeaders(addr, hsp.JsonDataFormat(), nil)
+	hdrs := c.BuildHeaders(addr, hsp.JsonDataFormat())
 
 	pkt := hsp.BuildPacket(hdrs, payload)
 
@@ -97,7 +99,7 @@ func (c *Client) SendBytes(address string, data []byte) (*hsp.Response, error) {
 		return nil, err
 	}
 
-	hdrs := c.BuildHeaders(addr, hsp.BytesDataFormat(), nil)
+	hdrs := c.BuildHeaders(addr, hsp.BytesDataFormat())
 
 	pkt := hsp.BuildPacket(hdrs, data)
 

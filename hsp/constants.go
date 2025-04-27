@@ -12,6 +12,7 @@ const HSP_PORT = "998"
 const (
 	H_STATUS      = "status"
 	H_DATA_FORMAT = "data-format"
+	H_AUTH        = "auth"
 	H_ROUTE       = "route"
 )
 
@@ -26,10 +27,11 @@ const (
 )
 
 const (
-	STATUS_SUCCESS     = 0
-	STATUS_NOTFOUND    = 69
-	STATUS_INTERNALERR = 129
-	STATUS_RECEIVED    = 1
+	STATUS_SUCCESS      = 0
+	STATUS_NOTFOUND     = 69
+	STATUS_INTERNALERR  = 129
+	STATUS_UNAUTHORIZED = 49
+	STATUS_RECEIVED     = 1
 )
 
 var DATA_FORMATS map[string]string = map[string]string{

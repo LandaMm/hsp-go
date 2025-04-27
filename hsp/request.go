@@ -4,22 +4,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"slices"
 )
 
 type Request struct {
-	conn   net.Conn
+	conn   *Connection
 	packet *Packet
 }
 
-func NewRequest(conn net.Conn, packet *Packet) *Request {
+func NewRequest(conn *Connection, packet *Packet) *Request {
 	return &Request{
 		conn, packet,
 	}
 }
 
-func (req *Request) Conn() net.Conn {
+func (req *Request) Conn() *Connection {
 	return req.conn
 }
 

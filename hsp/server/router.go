@@ -2,7 +2,6 @@ package server
 
 import (
 	"log"
-	"net"
 
 	"github.com/LandaMm/hsp-go/hsp"
 )
@@ -10,7 +9,7 @@ import (
 type RouteHandler func(req *hsp.Request) *hsp.Response
 
 type Router struct {
-	routes    map[string]RouteHandler
+	routes map[string]RouteHandler
 }
 
 func NewRouter() *Router {
@@ -26,15 +25,12 @@ func (r *Router) AddRoute(pathname string, handler RouteHandler) {
 	r.routes[pathname] = handler
 }
 
-func (r *Router) Handle(conn net.Conn) error {
+func (r *Router) Handle(conn *hsp.Connection) error {
 	defer conn.Close()
 
-	dupl := hsp.NewPacketDuplex(conn)
-
-	// TODO: Ability to keep connection alive
-	packet, err := dupl.ReadPacket()
+	packet, err := conn.Read()
 	if err != nil {
-		_, _ = dupl.WritePacket(hsp.NewErrorResponse(err).ToPacket())
+		_, _ = conn.Write(hsp.NewErrorResponse(err).ToPacket())
 		return err
 	}
 
@@ -43,15 +39,15 @@ func (r *Router) Handle(conn net.Conn) error {
 
 		if handler, ok := r.routes[route]; ok {
 			res := handler(req)
-			_, err := dupl.WritePacket(res.ToPacket())
+			_, err := conn.Write(res.ToPacket())
 			return err
 		} else if fallback, ok := r.routes["*"]; ok {
 			res := fallback(req)
-			_, err := dupl.WritePacket(res.ToPacket())
+			_, err := conn.Write(res.ToPacket())
 			return err
 		}
 	}
 
-	_, err = dupl.WritePacket(hsp.NewStatusResponse(hsp.STATUS_NOTFOUND).ToPacket())
+	_, err = conn.Write(hsp.NewStatusResponse(hsp.STATUS_NOTFOUND).ToPacket())
 	return err
 }

@@ -2,6 +2,8 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"maps"
 	"net"
 
@@ -9,13 +11,11 @@ import (
 )
 
 type Client struct {
-	Duplex *hsp.PacketDuplex
 	Headers map[string]string
 }
 
 func NewClient(headers map[string]string) *Client {
 	return &Client{
-		Duplex: nil,
 		Headers: headers,
 	}
 }
@@ -34,17 +34,44 @@ func (c *Client) BuildHeaders(address *hsp.Adddress, df *hsp.DataFormat) map[str
 }
 
 func (c *Client) SingleHit(addr *hsp.Adddress, pkt *hsp.Packet) (*hsp.Packet, error) {
-	conn, err := net.Dial("tcp", addr.String())
+	rawConn, err := net.Dial("tcp", addr.String())
 	if err != nil {
 		return nil, err
 	}
 
-	c.Duplex = hsp.NewPacketDuplex(conn)
-	if _, err := c.Duplex.WritePacket(pkt); err != nil {
+	defer rawConn.Close()
+
+	keys, err := hsp.GenerateKeyPair()
+	if err != nil {
 		return nil, err
 	}
 
-	return c.Duplex.ReadPacket()
+	n, err := rawConn.Write(keys.Public[:])
+	if err != nil {
+		return nil, err
+	}
+
+	if n != 32 {
+		return nil, fmt.Errorf("failed to send 32 bytes of key (%d sent instead)", n)
+	}
+
+	serverKey := make([]byte, 32)
+	if _, err := io.ReadFull(rawConn, serverKey); err != nil {
+		return nil, err
+	}
+
+	sharedKey, err := hsp.DeriveSharedKey(keys.Private, [32]byte(serverKey))
+	if err != nil {
+		return nil, err
+	}
+
+	conn := hsp.NewConnection(rawConn, keys, sharedKey)
+
+	if _, err := conn.Write(pkt); err != nil {
+		return nil, err
+	}
+
+	return conn.Read()
 }
 
 func (c *Client) SendText(address, text string) (*hsp.Response, error) {

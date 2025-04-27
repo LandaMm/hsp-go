@@ -15,6 +15,39 @@ import (
 	"github.com/chzyer/readline"
 )
 
+type Header struct {
+	Key string
+	Value string
+}
+
+type HeaderList struct {
+	Headers []Header
+}
+
+func (hl *HeaderList) Map() map[string]string {
+	headerMap := make(map[string]string)
+	for _, header := range hl.Headers {
+		headerMap[header.Key] = header.Value
+	}
+	return headerMap
+}
+
+func (hl *HeaderList) Set(arg string) error {
+	var key, value string
+	if _, err := fmt.Sscanf(arg, "%s %s", &key, &value); err != nil {
+		return err
+	}
+	hl.Headers = append(hl.Headers, Header{
+		Key: key,
+		Value: value,
+	})
+	return nil
+}
+
+func (hl *HeaderList) String() string {
+	return fmt.Sprintf("%d headers", len(hl.Headers))
+}
+
 func PrintPacket(pkt *hsp.Packet) error {
 	fmt.Printf("REQUEST %s\n", pkt.Headers[hsp.H_ROUTE])
 	fmt.Println("Headers:")
@@ -121,11 +154,11 @@ func StartServer(addr *hsp.Adddress) {
 	}
 }
 
-func StartSession(addr *hsp.Adddress, df *hsp.DataFormat) {
+func StartSession(addr *hsp.Adddress, df *hsp.DataFormat, headerList *HeaderList) {
 	url := addr.String() + addr.Route
 	fmt.Println("Starting session on", url)
 
-	c := client.NewClient()
+	c := client.NewClient(headerList.Map())
 
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -185,9 +218,13 @@ func main() {
 
 	var dataFormat string
 
+	var headerList HeaderList
+
 	flag.StringVar(&host, "host", "localhost", "specify server host")
 	flag.StringVar(&service, "port", "998", "specify server port")
 	flag.StringVar(&address, "addr", "localhost:998", "specify target address")
+
+	flag.Var(&headerList, "H", "provide additional header")
 
 	flag.StringVar(&dataFormat, "format", "text", "specify request's data format")
 
@@ -224,7 +261,7 @@ func main() {
 		fmt.Println("ERR: Invalid format selected for requests:", dataFormat)
 	}
 
-	StartSession(addr, df)
+	StartSession(addr, df, &headerList)
 }
 
 

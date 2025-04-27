@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,7 +15,7 @@ import (
 )
 
 type Header struct {
-	Key string
+	Key   string
 	Value string
 }
 
@@ -38,7 +37,7 @@ func (hl *HeaderList) Set(arg string) error {
 		return err
 	}
 	hl.Headers = append(hl.Headers, Header{
-		Key: key,
+		Key:   key,
 		Value: value,
 	})
 	return nil
@@ -89,7 +88,7 @@ func PrintPacket(pkt *hsp.Packet) error {
 	default:
 		fmt.Printf("ERR: Unsupported data format: %s\n", df.String())
 	}
-	
+
 	return nil
 }
 
@@ -118,7 +117,7 @@ func StartServer(addr *hsp.Adddress) {
 	srv := server.NewServer(*addr)
 	fmt.Printf("Server created on address: %s\n", srv.Addr.String())
 
-	handler := make(chan net.Conn, 1)
+	handler := make(chan *hsp.Connection, 1)
 
 	router := server.NewRouter()
 
@@ -263,6 +262,3 @@ func main() {
 
 	StartSession(addr, df, &headerList)
 }
-
-
-

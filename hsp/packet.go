@@ -11,7 +11,7 @@ const (
 )
 
 const (
-	PacketVersion int = 1
+	PacketVersion int = 2
 )
 
 type RawPacket struct {

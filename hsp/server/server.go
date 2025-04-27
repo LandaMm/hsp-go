@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+	"io"
 	"net"
 	"sync"
 
@@ -11,7 +13,7 @@ type Server struct {
 	Addr        hsp.Adddress
 	routePrefix string // TODO: Support route prefix, e.g listening on localhost/api
 	Running     bool
-	ConnChan    chan net.Conn
+	ConnChan    chan *hsp.Connection
 	listener    net.Listener
 	mu          sync.Mutex
 }
@@ -24,7 +26,7 @@ func NewServer(addr hsp.Adddress) *Server {
 	}
 }
 
-func (s *Server) SetListener(ln chan net.Conn) {
+func (s *Server) SetListener(ln chan *hsp.Connection) {
 	s.ConnChan = ln
 }
 
@@ -48,8 +50,42 @@ func (s *Server) Start() error {
 			return err
 		}
 
+		keys, err := hsp.GenerateKeyPair()
+		if err != nil {
+			return err
+		}
+
+		// Receive client's public key
+		clientKey := make([]byte, 32)
+		n, err := io.ReadFull(conn, clientKey)
+		if err != nil {
+			return err
+		}
+
+		if n != 32 {
+			return fmt.Errorf("Received invalid client's key with %d bytes (expected 32 bytes)", n)
+		}
+
+		// Send our public key to client
+		n, err = conn.Write(keys.Public[:])
+		if err != nil {
+			return err
+		}
+
+		if n != 32 {
+			return fmt.Errorf("Couldn't send 32 bytes of public key (%d sent instead)", n)
+		}
+
+		sharedKey, err := hsp.DeriveSharedKey(keys.Private, [32]byte(clientKey))
+		if err != nil {
+			return err
+		}
+
 		if s.ConnChan != nil {
-			s.ConnChan <- conn
+			connection := hsp.NewConnection(conn, keys, sharedKey)
+			s.ConnChan <- connection
+		} else {
+			conn.Close()
 		}
 	}
 

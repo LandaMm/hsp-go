@@ -7,18 +7,18 @@ import (
 
 type Adddress struct {
 	Host  string
-	Port string
+	Port  string
 	Route string
 }
 
 func ParseAddress(address string) (*Adddress, error) {
-	parts := strings.SplitN(address, "/", 2)
+	parts := strings.Split(address, "/")
 
 	var route string
 	if len(parts) == 1 {
 		route = "/"
 	} else if len(parts) > 1 {
-		route = "/" + strings.Join(parts[1:], "")
+		route = "/" + strings.Join(parts[1:], "/")
 	} else {
 		return nil, fmt.Errorf("Failed to parse address: %s", address)
 	}
@@ -30,15 +30,26 @@ func ParseAddress(address string) (*Adddress, error) {
 	if strings.Contains(addr, ":") {
 		p := strings.Split(addr, ":")
 		if len(p) >= 2 {
-			port = p[len(p) - 1]
+			port = p[len(p)-1]
 			addr = p[0]
 		}
 	}
 
 	return &Adddress{
 		Host:  addr,
-		Port: port,
+		Port:  port,
 		Route: route,
+	}, nil
+}
+
+func (a *Adddress) Extend(extension string) (*Adddress, error) {
+	route := strings.TrimRight(a.Route, "/")
+	ext := strings.TrimLeft(extension, "/")
+
+	return &Adddress{
+		Host:  a.Host,
+		Port:  a.Port,
+		Route: route + "/" + ext,
 	}, nil
 }
 

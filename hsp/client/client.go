@@ -4,31 +4,58 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
 	"maps"
 	"net"
 
 	"github.com/LandaMm/hsp-go/hsp"
 )
 
-type Client struct {
+type ClientOptions struct {
 	Headers map[string]string
+	// TODO: in future support multiple types of auth (credentials, key etc.)
+	Auth    string
+	BaseURL string
 }
 
-func NewClient(headers map[string]string) *Client {
+type Client struct {
+	Options *ClientOptions
+	Base    *hsp.Adddress
+}
+
+func NewClient(options *ClientOptions) *Client {
+	if options == nil {
+		options = &ClientOptions{}
+	}
+
+	var base *hsp.Adddress
+
+	if len(options.BaseURL) > 0 {
+		addr, err := hsp.ParseAddress(options.BaseURL)
+		if err == nil {
+			base = addr
+		}
+	}
+
 	return &Client{
-		Headers: headers,
+		Options: options,
+		Base:    base,
 	}
 }
 
 func (c *Client) BuildHeaders(address *hsp.Adddress, df *hsp.DataFormat) map[string]string {
 	headers := make(map[string]string)
 
-	if len(c.Headers) > 0 {
-		maps.Copy(headers, c.Headers)
+	if len(c.Options.Headers) > 0 {
+		maps.Copy(headers, c.Options.Headers)
 	}
 
 	headers[hsp.H_ROUTE] = address.Route
 	headers[hsp.H_DATA_FORMAT] = df.String()
+
+	if len(c.Options.Auth) > 0 {
+		headers[hsp.H_AUTH] = c.Options.Auth
+	}
 
 	return headers
 }
@@ -75,7 +102,14 @@ func (c *Client) SingleHit(addr *hsp.Adddress, pkt *hsp.Packet) (*hsp.Packet, er
 }
 
 func (c *Client) SendText(address, text string) (*hsp.Response, error) {
-	addr, err := hsp.ParseAddress(address)
+	var addr *hsp.Adddress
+	var err error
+
+	if c.Base != nil {
+		addr, err = c.Base.Extend(address)
+	} else {
+		addr, err = hsp.ParseAddress(address)
+	}
 
 	if err != nil {
 		return nil, err
@@ -96,7 +130,14 @@ func (c *Client) SendText(address, text string) (*hsp.Response, error) {
 }
 
 func (c *Client) SendJson(address string, data any) (*hsp.Response, error) {
-	addr, err := hsp.ParseAddress(address)
+	var addr *hsp.Adddress
+	var err error
+
+	if c.Base != nil {
+		addr, err = c.Base.Extend(address)
+	} else {
+		addr, err = hsp.ParseAddress(address)
+	}
 
 	if err != nil {
 		return nil, err
@@ -120,7 +161,14 @@ func (c *Client) SendJson(address string, data any) (*hsp.Response, error) {
 }
 
 func (c *Client) SendBytes(address string, data []byte) (*hsp.Response, error) {
-	addr, err := hsp.ParseAddress(address)
+	var addr *hsp.Adddress
+	var err error
+
+	if c.Base != nil {
+		addr, err = c.Base.Extend(address)
+	} else {
+		addr, err = hsp.ParseAddress(address)
+	}
 
 	if err != nil {
 		return nil, err

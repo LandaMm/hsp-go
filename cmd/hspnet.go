@@ -153,11 +153,8 @@ func StartServer(addr *hsp.Adddress) {
 	}
 }
 
-func StartSession(addr *hsp.Adddress, df *hsp.DataFormat, headerList *HeaderList) {
-	url := addr.String() + addr.Route
-	fmt.Println("Starting session on", url)
-
-	c := client.NewClient(headerList.Map())
+func StartSession(df *hsp.DataFormat, options *client.ClientOptions) {
+	c := client.NewClient(options)
 
 	rl, err := readline.New("> ")
 	if err != nil {
@@ -171,6 +168,13 @@ func StartSession(addr *hsp.Adddress, df *hsp.DataFormat, headerList *HeaderList
 	}()
 
 	for {
+		rl.SetPrompt("Route > ")
+		route, err := rl.Readline()
+		if err != nil {
+			break
+		}
+
+		rl.SetPrompt("Data > ")
 		line, err := rl.Readline()
 		if err != nil {
 			break
@@ -180,7 +184,7 @@ func StartSession(addr *hsp.Adddress, df *hsp.DataFormat, headerList *HeaderList
 
 		switch df.Format {
 		case hsp.DF_TEXT:
-			rsp, err = c.SendText(url, line)
+			rsp, err = c.SendText(route, line)
 		case hsp.DF_JSON:
 			var data any
 			err = json.Unmarshal([]byte(line), &data)
@@ -188,9 +192,9 @@ func StartSession(addr *hsp.Adddress, df *hsp.DataFormat, headerList *HeaderList
 				fmt.Println("ERR: Invalid JSON for request:", err)
 			}
 
-			rsp, err = c.SendJson(url, data)
+			rsp, err = c.SendJson(route, data)
 		case hsp.DF_BYTES:
-			rsp, err = c.SendBytes(url, []byte(line))
+			rsp, err = c.SendBytes(route, []byte(line))
 		default:
 			fmt.Println("ERR: Unsupported data format:", df.Format)
 			return
@@ -218,10 +222,13 @@ func main() {
 	var dataFormat string
 
 	var headerList HeaderList
+	var auth string
 
 	flag.StringVar(&host, "host", "localhost", "specify server host")
 	flag.StringVar(&service, "port", "998", "specify server port")
 	flag.StringVar(&address, "addr", "localhost:998", "specify target address")
+
+	flag.StringVar(&auth, "auth", "", "provide auth credentials")
 
 	flag.Var(&headerList, "H", "provide additional header")
 
@@ -241,12 +248,6 @@ func main() {
 		return
 	}
 
-	addr, err := hsp.ParseAddress(address)
-	if err != nil {
-		fmt.Printf("ERR: Invalid address %s: %v\n", address, err)
-		return
-	}
-
 	var df *hsp.DataFormat
 
 	switch dataFormat {
@@ -260,5 +261,11 @@ func main() {
 		fmt.Println("ERR: Invalid format selected for requests:", dataFormat)
 	}
 
-	StartSession(addr, df, &headerList)
+	options := &client.ClientOptions{
+		Headers: headerList.Map(),
+		Auth:    auth,
+		BaseURL: address,
+	}
+
+	StartSession(df, options)
 }

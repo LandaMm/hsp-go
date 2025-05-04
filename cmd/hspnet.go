@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/LandaMm/hsp-go/hsp"
@@ -153,7 +155,7 @@ func StartServer(addr *hsp.Adddress) {
 	}
 }
 
-func StartSession(df *hsp.DataFormat, options *client.ClientOptions) {
+func StartSession(options *client.ClientOptions) {
 	c := client.NewClient(options)
 
 	rl, err := readline.New("> ")
@@ -182,22 +184,32 @@ func StartSession(df *hsp.DataFormat, options *client.ClientOptions) {
 
 		var rsp *hsp.Response
 
-		switch df.Format {
-		case hsp.DF_TEXT:
-			rsp, err = c.SendText(route, line)
-		case hsp.DF_JSON:
+		if strings.HasPrefix(line, "/file ") {
+			filename := strings.TrimLeft(line, "/file ")
+
+			file, err := os.Open(filename)
+			if err != nil {
+				fmt.Printf("ERR: Failed to open file '%s': %v\n", filename, err)
+				continue
+			}
+
+			buf, err := io.ReadAll(file)
+			if err != nil {
+				fmt.Printf("ERR: Failed to read from file '%s': %v\n", filename, err)
+				continue
+			}
+
+			rsp, err = c.SendBytes(route, buf)
+		} else if strings.HasPrefix(line, "/json ") {
 			var data any
-			err = json.Unmarshal([]byte(line), &data)
+			err = json.Unmarshal([]byte(strings.TrimLeft(line, "/json ")), &data)
 			if err != nil {
 				fmt.Println("ERR: Invalid JSON for request:", err)
 			}
 
 			rsp, err = c.SendJson(route, data)
-		case hsp.DF_BYTES:
-			rsp, err = c.SendBytes(route, []byte(line))
-		default:
-			fmt.Println("ERR: Unsupported data format:", df.Format)
-			return
+		} else {
+			rsp, err = c.SendText(route, line)
 		}
 
 		if err != nil {
@@ -219,8 +231,6 @@ func main() {
 	var service string
 	var address string
 
-	var dataFormat string
-
 	var headerList HeaderList
 	var auth string
 
@@ -231,8 +241,6 @@ func main() {
 	flag.StringVar(&auth, "auth", "", "provide auth credentials")
 
 	flag.Var(&headerList, "H", "provide additional header")
-
-	flag.StringVar(&dataFormat, "format", "text", "specify request's data format")
 
 	flag.Parse()
 
@@ -248,24 +256,11 @@ func main() {
 		return
 	}
 
-	var df *hsp.DataFormat
-
-	switch dataFormat {
-	case hsp.DF_TEXT:
-		df = hsp.TextDataFormat()
-	case hsp.DF_JSON:
-		df = hsp.JsonDataFormat()
-	case hsp.DF_BYTES:
-		df = hsp.BytesDataFormat()
-	default:
-		fmt.Println("ERR: Invalid format selected for requests:", dataFormat)
-	}
-
 	options := &client.ClientOptions{
 		Headers: headerList.Map(),
 		Auth:    auth,
 		BaseURL: address,
 	}
 
-	StartSession(df, options)
+	StartSession(options)
 }

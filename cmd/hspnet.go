@@ -183,6 +183,7 @@ func StartSession(options *client.ClientOptions) {
 		}
 
 		var rsp *hsp.Response
+		var rerr error
 
 		if strings.HasPrefix(line, "/file ") {
 			filename := strings.TrimLeft(line, "/file ")
@@ -199,7 +200,7 @@ func StartSession(options *client.ClientOptions) {
 				continue
 			}
 
-			rsp, err = c.SendBytes(route, buf)
+			rsp, rerr = c.SendBytes(route, buf)
 		} else if strings.HasPrefix(line, "/json ") {
 			var data any
 			err = json.Unmarshal([]byte(strings.TrimLeft(line, "/json ")), &data)
@@ -207,12 +208,12 @@ func StartSession(options *client.ClientOptions) {
 				fmt.Println("ERR: Invalid JSON for request:", err)
 			}
 
-			rsp, err = c.SendJson(route, data)
+			rsp, rerr = c.SendJson(route, data)
 		} else {
-			rsp, err = c.SendText(route, line)
+			rsp, rerr = c.SendText(route, line)
 		}
 
-		if err != nil {
+		if rerr != nil {
 			fmt.Println("ERR: Failed to send text to server:", err)
 			continue
 		}

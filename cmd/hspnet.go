@@ -185,8 +185,16 @@ func StartSession(options *client.ClientOptions) {
 		var rsp *hsp.Response
 		var rerr error
 
-		if strings.HasPrefix(line, "/file ") {
-			filename := strings.TrimLeft(line, "/file ")
+		if strings.HasPrefix(line, "/file") {
+			what := strings.TrimLeft(line, "/file")
+			isJson := false
+			var filename string
+			if strings.HasPrefix(what, ":json ") {
+				isJson = true
+				filename = strings.TrimLeft(what, ":json ")
+			} else {
+				filename = strings.TrimLeft(what, " ")
+			}
 
 			file, err := os.Open(filename)
 			if err != nil {
@@ -194,21 +202,30 @@ func StartSession(options *client.ClientOptions) {
 				continue
 			}
 
-			buf, err := io.ReadAll(file)
-			if err != nil {
-				fmt.Printf("ERR: Failed to read from file '%s': %v\n", filename, err)
-				continue
-			}
+			if !isJson {
+				buf, err := io.ReadAll(file)
+				if err != nil {
+					fmt.Printf("ERR: Failed to read from file '%s': %v\n", filename, err)
+					continue
+				}
+				rsp, err = c.SendBytes(route, buf)
+			} else {
+				var data any
 
-			rsp, rerr = c.SendBytes(route, buf)
+				decoder := json.NewDecoder(file)
+				err = decoder.Decode(&data)
+				if err == nil {
+					rsp, err = c.SendJson(route, data)
+				}
+			}
 		} else if strings.HasPrefix(line, "/json ") {
 			var data any
 			err = json.Unmarshal([]byte(strings.TrimLeft(line, "/json ")), &data)
 			if err != nil {
 				fmt.Println("ERR: Invalid JSON for request:", err)
+			} else {
+				rsp, err = c.SendJson(route, data)
 			}
-
-			rsp, rerr = c.SendJson(route, data)
 		} else {
 			rsp, rerr = c.SendText(route, line)
 		}
